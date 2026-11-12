@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+.plugin-eval/
+work/
+build/
+*.mp4
+*.mov
+*.m4a
+*.wav
+*.mp3
+*.safetensors
+*.pt
+*.ckpt

@@ -1,0 +1,4 @@
+interface:
+  display_name: "采访→短视频切片"
+  short_description: "按对话主题剪出可核身份、可验构图与章节的采访短片"
+  default_prompt: "用 $interview-to-short-video-skill 先建立人物身份和对话选题计划，做一条可审样片；身份、文案、章节和人工验收达标后再扩展批量。"

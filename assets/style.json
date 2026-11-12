@@ -1,0 +1,21 @@
+{
+  "name": "interview_dark_gold_v1",
+  "canvas": [1080, 1920],
+  "fps": 25,
+  "background": [18, 20, 19],
+  "gold": "#E7C86F",
+  "white": "#FAF8F1",
+  "muted": "#BFC4BE",
+  "footer_color": "#8C9490",
+  "track_color": "#444946",
+  "top_fade": {"start": 380, "end": 550, "exponent": 1.7},
+  "bottom_fade": {"start": 1280, "end": 1670, "exponent": 1.4},
+  "portrait_picture": [0, 380, 1080, 1296],
+  "wide_picture": [0, 656, 1080, 608],
+  "title": {"y": 218, "size": 66},
+  "subtitle": {"y": 316, "size": 72},
+  "descriptor": {"y": 425, "size": 29},
+  "footer": {"y": 1825, "size": 27},
+  "navigation": {"size": 29, "text_y": 111, "bar_y": 150, "bar_height": 4},
+  "caption": {"size": 56, "x": 540, "y": 1660, "max_width": 912, "outline": 1.4, "shadow": 0.5}
+}
