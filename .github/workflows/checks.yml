@@ -17,3 +17,9 @@ jobs:
         env:
           TEST_FONT: /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
           TEST_FONT_FAMILY: Noto Sans CJK JP
+      - name: Exercise public workflow with fixture approvals
+        run: >-
+          python tests/smoke_public_workflow.py
+          --work "${{ runner.temp }}/public-smoke"
+          --font /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+          --font-family 'Noto Sans CJK JP'

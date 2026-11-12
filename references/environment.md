@@ -1,5 +1,7 @@
 # 环境与依赖
 
+从原始音视频开始，需要独立配置语音转文字（ASR）模型或获准的转写服务，再经校订与时间检查生成 SRT。本仓库负责后续编辑、文字确认与渲染，不包含 ASR 推理入口。已有可靠 SRT 可以直接接入；合成 demo 自带字幕，不能用于证明模型可用。
+
 ## 三层环境
 
 | 层 | 需要什么 | 是否必需 | 本仓库做什么 |
@@ -14,7 +16,7 @@ CPU（中央处理器）足以运行默认 libx264 渲染；不要求 GPU（图�
 
 核对日期：2026-11-12。[Qwen 官方项目](https://github.com/QwenLM/Qwen3-ASR) 发布 Qwen3-ASR-1.7B / 0.6B，以及 Qwen3-ForcedAligner-0.6B。ASR 是识别；Forced Aligner 是时间对齐，两者不能互换。这里没有将“千问 3.7”作为已证实型号。
 
-作者现有本机 ASR 技能声明采用 Apple Silicon + MLX 的 Qwen/Qwen3-ASR-1.7B，并以 nvidia/Nemotron-3-Diarization 在 CPU 上做说话人分离。此描述来自配置核对；本次切片发布测试没有重新执行模型推理，不能证明当前权重缓存或转写准确率。
+作者现有本机 ASR 技能声明采用 Apple Silicon + MLX 的 Qwen/Qwen3-ASR-1.7B，并以 nvidia/Nemotron-3-Diarization 在 CPU 上做说话人分离。2026-11-13 已在现有独立 ASR 环境中，以离线缓存实际运行生成语音的 smoke：返回 3 条带时间转写记录。该测试发现一句听写错误；按已知合成台词校订后，SRT 已接入渲染器生成 MP4。这验证了这台机器的缓存链路，不验证全新模型安装、真实采访准确率或其他平台。
 
 可选集成：[grapeot/asr-skill](https://github.com/grapeot/asr-skill)。这是独立项目，按其 README 在持久 checkout 内建立 Python 3.12 主环境及独立声学子环境，运行其 `init` / `doctor`；`doctor --no-load` 只查依赖，不证明模型能加载。不要把它的 torch / transformers / MLX 依赖安装进本仓库 .venv。安装前核对上游当时的平台、版本和许可；本仓库没有锁定整个 ASR 环境。
 

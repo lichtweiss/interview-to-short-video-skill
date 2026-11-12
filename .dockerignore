@@ -1,0 +1,8 @@
+**
+!requirements.txt
+!scripts/
+!scripts/*.py
+!assets/
+!assets/style.json
+!tests/
+!tests/*.py

@@ -8,7 +8,8 @@ Acceptance（验收标准）：
 
 - skill-creator quick_validate 通过；内部文档链接可解析。
 - unittest 回归通过，包含错误输入、文案确认/指纹、状态门槛与完整渲染。
-- 新工作目录从生成素材到 MP4 成功，ffprobe 与完整解码通过，QC 保持人工 pending。
+- 新工作目录从生成素材到 MP4 成功，ffprobe 与完整解码通过，QC 保持人工 pending。运行 tests/smoke_public_workflow.py；容器复现见验证记录。
+- 中英文首页、技能入口与环境文档一致注明：原始素材需要独立 ASR 模型/服务，已有校订 SRT 可直接接入；合成演示不测试 ASR。
 - Plugin Eval 静态报告已查看；不把静态分数当作行为基准或真实 token 用量。
 - git 暂存清单仅有代码、文档和合成测试；无媒体/权重/凭据/个人路径。干净克隆按 README 可复现。
 - 发布记录注明已测试平台、未测试 ASR/真实听审范围；GitHub CI 完成后核对结果。

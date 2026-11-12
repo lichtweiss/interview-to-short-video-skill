@@ -10,7 +10,9 @@
 
 > **持续迭代与维护中。** 当前是早期公开实现，编辑规则、数据字段和工具接口仍可能调整。请根据下方验证范围判断适用性；需要复现生产时，固定使用某次提交版本。
 
-[先试跑](#不安装-asr-模型也能试跑) · [工作关系](#工作关系) · [环境说明](references/environment.md) · [验证记录](docs/validation.md) · [设计诊断](docs/design-review.md)
+> **转写前提：** 从原始采访开始，必须另配**独立的语音转文字模型或转写服务**，并校订字幕与时间。本技能不包含、也不直接调用语音识别模型。已有带时间轴且经过校订的 SRT 时，可以直接接入，无需再安装一套模型。下方演示预置合成字幕，跳过了 ASR。
+
+[先试跑](#用预置字幕测试渲染) · [工作关系](#工作关系) · [环境说明](references/environment.md) · [验证记录](docs/validation.md) · [设计诊断](docs/design-review.md)
 
 ## 能得到什么
 
@@ -54,9 +56,9 @@ flowchart TD
 
 《画面文字编订.md》控制标题、章节名称、角标等固定文字和字幕字号；关联的 SRT 控制口述字幕内容与时间。默认等待用户编辑并确认后开始生产；只有明确接受初稿并授权生产，才使用第一版。沉默不算确认。修改任一输入后需重新编译和渲染，已导出的 MP4 不会自动更新。
 
-ASR（自动语音识别）是可选前置环节。文档记录的本机路线使用 Qwen3-ASR-1.7B，不捆绑权重或推理环境；其他已获许可并校订的 SRT 也可接入。强制对齐把文字放回时间轴；说话人分离只产生声学标签，不证明真实姓名。详见[环境与 ASR](references/environment.md)。
+原始素材没有可靠字幕时，需要先通过独立 ASR（自动语音识别）完成转写。文档记录的本机路线使用 Qwen3-ASR-1.7B，不捆绑权重或推理环境；其他已获许可并校订的 SRT 也可接入。强制对齐把文字放回时间轴；说话人分离只产生声学标签，不证明真实姓名。详见[环境与 ASR](references/environment.md)。
 
-## 不安装 ASR 模型也能试跑
+## 用预置字幕测试渲染
 
 安装 Git、Python 3.10+、带 `ffprobe`、`libass` 和 `libx264` 的 FFmpeg，以及支持中文的字体。macOS 可用 `brew install ffmpeg`；Ubuntu 可用 `sudo apt-get install ffmpeg fonts-noto-cjk`。
 
@@ -84,6 +86,17 @@ python3 -m venv .venv
 
 打开 `work/review/index.html`。它仍是人工审阅待完成的预览。计划与成片如何对应，见[主题输出合同](references/themes.md)。
 
+要一起检查文字确认、字幕修改保护、渲染与观看页命令，可运行：
+
+```bash
+.venv/bin/python tests/smoke_public_workflow.py \
+  --work work/public-smoke \
+  --font /path/to/NotoSansCJK-Regular.ttc \
+  --font-family 'Noto Sans CJK SC'
+```
+
+此测试使用虚构确认与生成素材。[沙盒复现与独立 ASR 接入记录](docs/validation.md#sandbox-and-asr-integration)说明实际检查与未验证范围。
+
 ## 用于真实项目
 
 让 Codex 发现技能时，可将仓库克隆到 `~/.codex/skills/interview-to-short-video-skill`，或把该路径链接到持久保存的仓库，再开启新会话。调用 `$interview-to-short-video-skill`。编辑约束见 [SKILL.md](SKILL.md)；其他助手平台尚未分别验证。
@@ -108,7 +121,7 @@ python3 -m venv .venv
 | 渲染与文件合同 | 13 项测试覆盖合成渲染、完整解码、非法输入、文案/SRT 指纹与主题导出 |
 | 平台 | 本机 macOS arm64 / Python 3.14；GitHub Actions Ubuntu / Python 3.10、3.12 |
 | 编辑判断 | 仍需人工核对原素材；尚无公开真实采访行为基准 |
-| ASR 与 Windows | 不在本仓库发布验证的已测范围内 |
+| ASR 与 Windows | 已在 Apple Silicon 用缓存中的独立 Qwen3-ASR 识别生成语音，并观察到需校订的错误；全新 ASR 安装与 Windows 仍未验证 |
 | 静态评估 | Plugin Eval 经重构从 68/D 提升到 77/C；仍有静态预算和复杂度告警，分数不代表实际剪辑成功率 |
 
 [详细验证记录](docs/validation.md) · [当前设计诊断与优先级](docs/design-review.md)

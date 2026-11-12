@@ -10,7 +10,9 @@ Selecting a striking sentence is only part of the job. A usable clip also needs 
 
 > **Actively maintained and under iteration.** This is an early public implementation. Editorial rules, schemas, and tools may evolve. Use the validation record below to judge what is proven today; pin a commit for repeatable production.
 
-[Try it](#try-it-without-an-asr-model) · [Workflow](#how-it-works) · [Environment](references/environment.md) · [Validation](docs/validation.md) · [Design review](docs/design-review.md)
+> **Transcription prerequisite:** Starting from raw interviews requires a **separate ASR model or transcription service**, followed by subtitle review and timing checks. This skill does not include or invoke a speech-to-text model. If you already have reviewed, timestamped SRT, you can use that input without installing another model. The demo supplies synthetic subtitles and skips ASR.
+
+[Try it](#try-the-renderer-with-supplied-subtitles) · [Workflow](#how-it-works) · [Environment](references/environment.md) · [Validation](docs/validation.md) · [Design review](docs/design-review.md)
 
 ## What you get
 
@@ -54,9 +56,9 @@ flowchart TD
 
 `画面文字编订.md` (on-screen copy review) controls titles, chapter labels, other fixed text, and subtitle sizing. Its linked SRT controls spoken subtitle text and timing. The user edits and confirms before production, unless they explicitly accept the first draft and authorize production. Silence is not approval. Changes to either file require re-application and re-rendering; already exported MP4s do not update themselves.
 
-ASR means automatic speech recognition. It is an optional upstream step, not part of the renderer. The documented local route uses Qwen3-ASR-1.7B; model weights and inference environments are not bundled. Reviewed SRT from other permitted tools can also be used. Alignment places text on the timeline; diarization produces acoustic labels, not confirmed names. See [Environment and ASR](references/environment.md).
+ASR means automatic speech recognition. Raw media without reviewed subtitles needs this separate upstream step. The documented local route uses Qwen3-ASR-1.7B; model weights and inference environments are not bundled. Reviewed SRT from other permitted tools can also be used. Alignment places text on the timeline; diarization produces acoustic labels, not confirmed names. See [Environment and ASR](references/environment.md).
 
-## Try it without an ASR model
+## Try the renderer with supplied subtitles
 
 Install Git, Python 3.10+, FFmpeg with `ffprobe`, `libass` and `libx264`, and a CJK-capable font. On macOS use `brew install ffmpeg`; on Ubuntu use `sudo apt-get install ffmpeg fonts-noto-cjk`.
 
@@ -84,6 +86,17 @@ To export the grouped review page, add `"render_dir": "preview"` to the clip in 
 
 Open `work/review/index.html`. It remains a preview with human review pending. [Theme export contract](references/themes.md) explains the plan/render mapping.
 
+To check the copy approval, edited-subtitle protection, rendering, and review-page commands together, run:
+
+```bash
+.venv/bin/python tests/smoke_public_workflow.py \
+  --work work/public-smoke \
+  --font /path/to/NotoSansCJK-Regular.ttc \
+  --font-family 'Noto Sans CJK SC'
+```
+
+This test uses fixture approvals and generated media. [Sandbox reproduction and external ASR evidence](docs/validation.md#sandbox-and-asr-integration) describe what was checked and what remains unverified.
+
 ## Use it in an editing project
 
 For Codex discovery, clone into `~/.codex/skills/interview-to-short-video-skill`, or link that path to a persistent checkout, then start a new session. Invoke `$interview-to-short-video-skill`. Read [SKILL.md](SKILL.md) for editing constraints; other assistant hosts have not been separately verified.
@@ -108,10 +121,10 @@ Use `--accept-default` only with actual user authorization to produce the first 
 | Renderer and file contracts | 13 automated tests cover synthetic rendering, full decode, malformed inputs, copy/SRT fingerprints, and theme export |
 | Platforms | macOS arm64 / Python 3.14 locally; Ubuntu / Python 3.10 and 3.12 in GitHub Actions |
 | Editorial decisions | Need human source review; no public real-interview behavioral benchmark yet |
-| ASR and Windows | Not tested as part of this repository's release validation |
+| ASR and Windows | A cached external Qwen3-ASR runtime processed generated speech on Apple Silicon; an observed recognition error required correction. Fresh ASR installation and Windows remain untested |
 | Static assessment | Plugin Eval improved from 68/D to 77/C after refactoring; static budget and complexity warnings remain. This is not a measured editing success rate |
 
-[Validation record](docs/validation.md) · [Current design diagnosis and priorities](docs/design-review.md)
+[Sandbox checks and validation record](docs/validation.md) · [Current design diagnosis and priorities](docs/design-review.md)
 
 ## Documentation and maintenance
 
