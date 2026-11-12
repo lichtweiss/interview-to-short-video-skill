@@ -1,8 +1,18 @@
 # Local Validation Record
 
-Checked 2026-11-12 using synthetic media only; no real interview was included.
+Checked 2026-11-12; updated 2026-11-13 using synthetic media only. No real interview was included.
 
-## Completed
+## 2026-11-13 update
+
+- Plugin Eval 0.1.0 (bundled build d420d130), default rules at the repository root: **68/D → 77/C**. Long-function and long-line warnings cleared; all-file static budget, complexity heuristic, and public-document warnings remain. The evaluator still reports high risk due to the budget failure. See the [score interpretation and reproducible commands](design-review.md#plugin-eval-优化记录).
+- Entry-point estimate: 1,049 → 668 tokens. These are static estimates, not measured assistant usage. Total deferred estimate increased after formatting and decomposition; no files were hidden from scoring.
+- 13 unittest cases pass locally, including new rejection checks for invalid rendering settings and modified video/subtitle artifacts after QC.
+- Four synthetic rendering configurations produced identical MP4, overlay, ASS, SRT, and sampled-frame bytes before and after refactoring, with equal QC records. Synthetic theme-export and palette-output trees also matched.
+- English and Chinese landing pages include matching installation/demo commands, language links, maintenance status, and explicit limitations. Skill Creator validation and repository link checks pass.
+
+## Original release evidence
+
+### Completed
 
 - Skill Creator `quick_validate.py`: passed.
 - Two independent review passes found and helped fix invalid numeric inputs, malformed plan crashes, relative media paths after copy compilation, palette overrun diagnostics, and mismatches between theme plans and rendered clips.
@@ -10,7 +20,7 @@ Checked 2026-11-12 using synthetic media only; no real interview was included.
 - Environment doctor found Pillow 12.1.0, FFmpeg 8.0, ffprobe, the `ass` filter, and libx264; the system CJK font loaded.
 - Generated bars and tone rendered to a 1080x1920 MP4 with QC, subtitles, and frames. Theme export produced a review page and manifest. A sampled encoded frame showed title, chapter, captions, and footer.
 - Human visual, listening, and semantic review remained `pending`; synthetic validation was not represented as an accepted interview.
-- Plugin Eval static result after refactors: 68/D; deferred token estimate 24,742 and budget check failed. The estimate counts all scripts and reference/support files, including conditionally loaded resources; it is not measured invocation usage. Remaining warnings are driven by the renderer's large orchestration function, long lines, and the evaluator's extra-document heuristic. The rendering refactor was attempted but rejected after the synthetic test caught a NameError; the original tested renderer was retained. This static grade is not evidence of failed behavior and does not replace the passing workflow tests.
+- Plugin Eval static result after refactors: 68/D; deferred token estimate 24,742 and budget check failed. The estimate counts all scripts and reference/support files, including conditionally loaded resources; it is not measured invocation usage. Remaining warnings are driven by the renderer's large orchestration function, long lines, and the evaluator's extra-document heuristic. At the original release, a rendering refactor was attempted but rejected after the synthetic test caught a NameError; the original tested renderer was retained. The later refactor and new grade are recorded above. This historical static grade is not evidence of failed behavior and does not replace the passing workflow tests.
 - Public wording about required source material and minimum project context was approved by the author before the public repository was created.
 - Clean clone from GitHub passed all 11 tests after installing the dependency from the local offline package cache.
 - GitHub Actions run [43203700450](https://github.com/lichtweiss/interview-to-short-video-skill/actions/runs/43203700450) passed both Ubuntu Python 3.10 and Python 3.12 jobs, including dependency installation and the full test suite.

@@ -5,13 +5,13 @@ The checker validates editorial evidence and state, not the pixels or audio in a
 rendered video. Exit 0 means the plan is internally consistent for its stage;
 exit 1 reports blocking errors.
 """
+
 import argparse
 import json
 import math
 import re
 import sys
 from pathlib import Path
-
 
 STAGES = {"candidate", "preview", "formal", "delivered"}
 LAYOUTS = {"solo", "two_shot", "wide"}
@@ -34,7 +34,9 @@ def read_plan(path):
     try:
         value = json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ValueError(f"invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}") from exc
+        raise ValueError(
+            f"invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}"
+        ) from exc
     if not isinstance(value, dict):
         raise ValueError("plan root must be a JSON object")
     return value
@@ -104,17 +106,31 @@ def _identities(plan, errors, correction_pairs):
                 names[public_name] = pid
             for wrong, correct in correction_pairs:
                 if public_name == wrong:
-                    add(errors, f"{path}.public_name", f"uses corrected name {wrong!r}; use {correct!r}")
-        if not isinstance(person.get("status"), str) or person.get("status") not in {"pending", "confirmed", "rejected"}:
+                    add(
+                        errors,
+                        f"{path}.public_name",
+                        f"uses corrected name {wrong!r}; use {correct!r}",
+                    )
+        if not isinstance(person.get("status"), str) or person.get("status") not in {
+            "pending",
+            "confirmed",
+            "rejected",
+        }:
             add(errors, f"{path}.status", "must be pending, confirmed, or rejected")
         if person.get("status") == "confirmed":
             if not nonempty(person.get("confirmed_by")):
                 add(errors, f"{path}.confirmed_by", "required for a confirmed identity")
             evidence = person.get("evidence")
-            if not isinstance(evidence, dict) or not any(nonempty(evidence.get(k)) for k in ("voice", "visual", "source_ref")):
+            if not isinstance(evidence, dict) or not any(
+                nonempty(evidence.get(k)) for k in ("voice", "visual", "source_ref")
+            ):
                 add(errors, f"{path}.evidence", "include voice, visual, or source_ref evidence")
         if person.get("correction") and not nonempty(person.get("correction_note")):
-            add(errors, f"{path}.correction_note", "explain a user correction when correction is present")
+            add(
+                errors,
+                f"{path}.correction_note",
+                "explain a user correction when correction is present",
+            )
     return people
 
 
@@ -125,7 +141,11 @@ def _themes(plan, errors):
         add(errors, "themes", "provide semantic theme groups, even for one theme")
         themes = []
     for i, theme in enumerate(themes):
-        if not isinstance(theme, dict) or not nonempty(theme.get("id")) or not nonempty(theme.get("name")):
+        if (
+            not isinstance(theme, dict)
+            or not nonempty(theme.get("id"))
+            or not nonempty(theme.get("name"))
+        ):
             add(errors, f"themes[{i}]", "requires non-empty id and name")
             continue
         if theme["id"] in theme_ids:
@@ -165,7 +185,11 @@ def _clip_text(clip, path, errors, correction_pairs):
         if isinstance(value, str):
             for wrong, correct in correction_pairs:
                 if wrong in value:
-                    add(errors, f"{path}.{field}", f"contains corrected name {wrong!r}; use {correct!r}")
+                    add(
+                        errors,
+                        f"{path}.{field}",
+                        f"contains corrected name {wrong!r}; use {correct!r}",
+                    )
 
 
 def _windows(clip, path, errors):
@@ -174,7 +198,12 @@ def _windows(clip, path, errors):
         add(errors, f"{path}.source_windows", "provide at least one source window")
     else:
         for j, window in enumerate(windows):
-            if not isinstance(window, dict) or not number(window.get("start")) or not number(window.get("end")) or not 0 <= window["start"] < window["end"]:
+            if (
+                not isinstance(window, dict)
+                or not number(window.get("start"))
+                or not number(window.get("end"))
+                or not 0 <= window["start"] < window["end"]
+            ):
                 add(errors, f"{path}.source_windows[{j}]", "requires numeric start < end")
     return windows
 
@@ -203,13 +232,25 @@ def _dialogue(clip, path, errors, people, used_people):
     if not nonempty(clip.get("selection_basis")):
         add(errors, f"{path}.selection_basis", "say why the topic/dialogue unit was selected")
     elif clip["selection_basis"] in {"person_quota", "person_first", "speaker_quota"}:
-        add(errors, f"{path}.selection_basis", "person quota is not a valid editorial basis; select by topic and dialogue")
+        add(
+            errors,
+            f"{path}.selection_basis",
+            "person quota is not a valid editorial basis; select by topic and dialogue",
+        )
     if multi:
         relation = clip.get("dialogue_relation")
         if not isinstance(relation, str) or relation not in RELATIONS:
-            add(errors, f"{path}.dialogue_relation", f"required for multi-person clips; use one of {sorted(RELATIONS)}")
+            add(
+                errors,
+                f"{path}.dialogue_relation",
+                f"required for multi-person clips; use one of {sorted(RELATIONS)}",
+            )
         if not nonempty(clip.get("interaction_summary")):
-            add(errors, f"{path}.interaction_summary", "describe the question, response, agreement, contrast, or clarification")
+            add(
+                errors,
+                f"{path}.interaction_summary",
+                "describe the question, response, agreement, contrast, or clarification",
+            )
     return speakers
 
 
@@ -220,27 +261,57 @@ def _composition(clip, path, errors, speakers):
         add(errors, f"{path}.layout", f"must be one of {sorted(LAYOUTS)}")
     if multi and layout == "solo":
         if not nonempty(clip.get("current_speaker")) or clip.get("current_speaker") not in speakers:
-            add(errors, f"{path}.current_speaker", "required and must be one of speakers when a multi-person clip uses solo layout")
+            add(
+                errors,
+                f"{path}.current_speaker",
+                "required and must be one of speakers when a multi-person clip uses solo layout",
+            )
         if not nonempty(clip.get("solo_reason")):
             add(errors, f"{path}.solo_reason", "explain why the solo cut preserves the interaction")
     if multi and layout in ("two_shot", "wide") and clip.get("interaction_visible") is not True:
-        add(errors, f"{path}.interaction_visible", "must be true when the layout is used to preserve interaction")
+        add(
+            errors,
+            f"{path}.interaction_visible",
+            "must be true when the layout is used to preserve interaction",
+        )
     composition = clip.get("composition")
     if not isinstance(composition, dict):
         add(errors, f"{path}.composition", "required with subject_centered/interaction evidence")
     else:
         if layout == "solo" and composition.get("subject_centered") is not True:
-            add(errors, f"{path}.composition.subject_centered", "must be true for a solo speaking subject")
+            add(
+                errors,
+                f"{path}.composition.subject_centered",
+                "must be true for a solo speaking subject",
+            )
         if layout in ("two_shot", "wide") and composition.get("interaction_visible") is not True:
-            add(errors, f"{path}.composition.interaction_visible", "must be true for a conversational frame")
+            add(
+                errors,
+                f"{path}.composition.interaction_visible",
+                "must be true for a conversational frame",
+            )
         if not nonempty(composition.get("evidence")):
-            add(errors, f"{path}.composition.evidence", "record the frame/sample used to choose the composition")
+            add(
+                errors,
+                f"{path}.composition.evidence",
+                "record the frame/sample used to choose the composition",
+            )
     if "crop" in clip:
         crop = clip["crop"]
-        if not isinstance(crop, list) or len(crop) != 4 or not all(type(v) is int for v in crop) or min(crop[0], crop[1]) < 0 or min(crop[2], crop[3]) <= 0:
+        if (
+            not isinstance(crop, list)
+            or len(crop) != 4
+            or not all(type(v) is int for v in crop)
+            or min(crop[0], crop[1]) < 0
+            or min(crop[2], crop[3]) <= 0
+        ):
             add(errors, f"{path}.crop", "must be [x, y, width, height] with positive dimensions")
         if not nonempty(clip.get("crop_evidence")):
-            add(errors, f"{path}.crop_evidence", "required; do not rely on a hard-coded left/right crop")
+            add(
+                errors,
+                f"{path}.crop_evidence",
+                "required; do not rely on a hard-coded left/right crop",
+            )
 
 
 def _chapters(clip, path, errors, windows):
@@ -261,29 +332,60 @@ def _chapters(clip, path, errors, windows):
             if not number(start) or start < 0 or start <= previous:
                 add(errors, f"{cpath}.start", "must be numeric and strictly increasing")
             previous = start if number(start) else previous
-            if number(start) and isinstance(windows, list) and windows and all(isinstance(w, dict) and number(w.get("start")) and number(w.get("end")) and 0 <= w["start"] < w["end"] for w in windows):
+            if (
+                number(start)
+                and isinstance(windows, list)
+                and windows
+                and all(
+                    isinstance(w, dict)
+                    and number(w.get("start"))
+                    and number(w.get("end"))
+                    and 0 <= w["start"] < w["end"]
+                    for w in windows
+                )
+            ):
                 if start >= sum(w["end"] - w["start"] for w in windows):
                     add(errors, f"{cpath}.start", "chapter must be inside retained source duration")
             if not nonempty(chapter.get("label")):
                 add(errors, f"{cpath}.label", "required")
             elif PLACEHOLDER.fullmatch(chapter["label"].strip()):
-                add(errors, f"{cpath}.label", "placeholder chapter labels are not semantic editorial decisions")
+                add(
+                    errors,
+                    f"{cpath}.label",
+                    "placeholder chapter labels are not semantic editorial decisions",
+                )
             if not nonempty(chapter.get("semantic_basis")):
-                add(errors, f"{cpath}.semantic_basis", "state the content turn that begins this chapter")
+                add(
+                    errors,
+                    f"{cpath}.semantic_basis",
+                    "state the content turn that begins this chapter",
+                )
     return len(chapters)
 
 
 def _reviews(clip, path, errors):
-    if not isinstance(clip.get("copy_status"), str) or clip.get("copy_status") not in {"draft", "user-confirmed", "rejected"}:
+    if not isinstance(clip.get("copy_status"), str) or clip.get("copy_status") not in {
+        "draft",
+        "user-confirmed",
+        "rejected",
+    }:
         add(errors, f"{path}.copy_status", "must be draft, user-confirmed, or rejected")
-    if not isinstance(clip.get("machine_qc"), str) or clip.get("machine_qc") not in {"pending", "passed", "failed"}:
+    if not isinstance(clip.get("machine_qc"), str) or clip.get("machine_qc") not in {
+        "pending",
+        "passed",
+        "failed",
+    }:
         add(errors, f"{path}.machine_qc", "must be pending, passed, or failed")
     human = clip.get("human_review")
     if not isinstance(human, dict):
         add(errors, f"{path}.human_review", "required; keep human review separate from machine_qc")
     else:
         for key in REVIEW_KEYS:
-            if not isinstance(human.get(key), str) or human.get(key) not in {"pending", "approved", "rejected"}:
+            if not isinstance(human.get(key), str) or human.get(key) not in {
+                "pending",
+                "approved",
+                "rejected",
+            }:
                 add(errors, f"{path}.human_review.{key}", "must be pending, approved, or rejected")
 
 
@@ -291,10 +393,22 @@ def _batch(plan, clips, chapter_counts, errors):
     if len(clips) > 1:
         audit = plan.get("batch_audit")
         if not isinstance(audit, dict) or audit.get("chapter_reviewed") is not True:
-            add(errors, "batch_audit.chapter_reviewed", "required true for a batch; review every clip's chapter count")
+            add(
+                errors,
+                "batch_audit.chapter_reviewed",
+                "required true for a batch; review every clip's chapter count",
+            )
         if chapter_counts and all(count == 1 for count in chapter_counts):
-            if not isinstance(audit, dict) or audit.get("uniform_single_chapter_decision") != "accepted_after_review" or not nonempty(audit.get("uniform_single_chapter_justification")):
-                add(errors, "batch_audit.uniform_single_chapter_justification", "all-single chapter batches require an explicit semantic justification")
+            if (
+                not isinstance(audit, dict)
+                or audit.get("uniform_single_chapter_decision") != "accepted_after_review"
+                or not nonempty(audit.get("uniform_single_chapter_justification"))
+            ):
+                add(
+                    errors,
+                    "batch_audit.uniform_single_chapter_justification",
+                    "all-single chapter batches require an explicit semantic justification",
+                )
 
 
 def _state(plan, stage, errors):
@@ -316,23 +430,43 @@ def _promotion(plan, stage, clips, people, used_people, errors):
     source_registry = plan.get("source_registry")
     if stage in {"formal", "delivered"}:
         if not isinstance(source_registry, list) or not source_registry:
-            add(errors, "source_registry", "formal promotion requires at least one registered source")
+            add(
+                errors,
+                "source_registry",
+                "formal promotion requires at least one registered source",
+            )
         else:
             for i, source in enumerate(source_registry):
                 path = f"source_registry[{i}]"
                 if not isinstance(source, dict) or not nonempty(source.get("source_ref")):
                     add(errors, path, "requires a non-empty source_ref")
                 if isinstance(source, dict) and not nonempty(source.get("sha256")):
-                    add(errors, f"{path}.sha256", "record the source fingerprint before promotion to formal")
+                    add(
+                        errors,
+                        f"{path}.sha256",
+                        "record the source fingerprint before promotion to formal",
+                    )
 
     copy_confirmation = plan.get("copy_confirmation")
     if stage in {"formal", "delivered"}:
-        if not isinstance(copy_confirmation, dict) or copy_confirmation.get("status") != "user-confirmed" or not nonempty(copy_confirmation.get("revision_id")):
-            add(errors, "copy_confirmation", "formal promotion requires user-confirmed status and revision_id")
+        if (
+            not isinstance(copy_confirmation, dict)
+            or copy_confirmation.get("status") != "user-confirmed"
+            or not nonempty(copy_confirmation.get("revision_id"))
+        ):
+            add(
+                errors,
+                "copy_confirmation",
+                "formal promotion requires user-confirmed status and revision_id",
+            )
     for i, speaker in enumerate(sorted(used_people)):
         person = people.get(speaker)
         if stage in {"formal", "delivered"} and (not person or person.get("status") != "confirmed"):
-            add(errors, f"identity_map[{speaker}]", "every speaker used in formal clips must be user-confirmed")
+            add(
+                errors,
+                f"identity_map[{speaker}]",
+                "every speaker used in formal clips must be user-confirmed",
+            )
     if stage in {"formal", "delivered"}:
         for i, clip in enumerate(clips):
             if not isinstance(clip, dict):
@@ -347,7 +481,11 @@ def _promotion(plan, stage, clips, people, used_people, errors):
                 human = {}
             for key in REVIEW_KEYS:
                 if human.get(key) != "approved":
-                    add(errors, f"{path}.human_review.{key}", "formal delivery requires explicit human approval")
+                    add(
+                        errors,
+                        f"{path}.human_review.{key}",
+                        "formal delivery requires explicit human approval",
+                    )
 
 
 def validate(plan, requested_stage=None):
@@ -402,7 +540,11 @@ def main():
             print(f"FAIL plan: {exc}", file=sys.stderr)
         return 1
     errors = validate(plan, args.stage)
-    result = {"valid": not errors, "stage": args.stage or plan.get("stage", "preview"), "errors": [e.as_dict() for e in errors]}
+    result = {
+        "valid": not errors,
+        "stage": args.stage or plan.get("stage", "preview"),
+        "errors": [e.as_dict() for e in errors],
+    }
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     elif errors:

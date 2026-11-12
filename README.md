@@ -1,88 +1,131 @@
-# Interview to Short Video Skill
+# Interview → Short Video Skill
 
-采访 → 短视频切片：为 Codex 等能够读取 SKILL.md 的 AI 助手提供编辑流程，并附带 Python/FFmpeg 渲染工具。面向真实采访、专家对谈、播客视频，按完整意群选段，保留人物、问答和限定条件。说明以中文为主，英文目录名便于安装和分享。
+**English** · [简体中文](README.zh-CN.md)
 
-**当前版本：v0.1.0 本地发布候选，尚未上传。** 这是需要人工编辑与听看的工作流，不是一键自动爆款生成器。已有字幕即可使用，不需要先部署大模型。支持单个连续片段渲染；多段拼接要先制作干净中间片并重算字幕时间。发布验证范围见 [验证报告](docs/validation.md)。
+[![Checks](https://github.com/lichtweiss/interview-to-short-video-skill/actions/workflows/checks.yml/badge.svg)](https://github.com/lichtweiss/interview-to-short-video-skill/actions/workflows/checks.yml) · [MIT](LICENSE)
 
-## 关系图
+Turn a long interview into short videos that preserve what was actually said—and make the batch easy to review by topic.
+
+Selecting a striking sentence is only part of the job. A usable clip also needs the right speaker, enough context, accurate subtitles, approved on-screen copy, and a complete ending. This skill helps an AI assistant manage those decisions and provides local tools to render and organize the result.
+
+> **Actively maintained and under iteration.** This is an early public implementation. Editorial rules, schemas, and tools may evolve. Use the validation record below to judge what is proven today; pin a commit for repeatable production.
+
+[Try it](#try-it-without-an-asr-model) · [Workflow](#how-it-works) · [Environment](references/environment.md) · [Validation](docs/validation.md) · [Design review](docs/design-review.md)
+
+## What you get
+
+| Need | Result |
+|---|---|
+| Find coherent excerpts | A source-linked editorial plan with complete thought units and speaker evidence |
+| Organize a batch | Proposed semantic themes, series order, topic folders, an HTML review page, and one manifest |
+| Control words before production | A visible copy review document plus linked SRT files, followed by explicit user confirmation |
+| Produce a consistent preview | A 1080×1920 MP4, SRT/ASS subtitles, overlay, sampled frames, render log, and machine QC |
+| Decide what can be delivered | Separate machine checks, human listening/viewing, copy approval, and delivery states |
+
+Use it for real interviews, expert conversations, or video podcasts when you can review the source and want a traceable editing process. An assistant proposes topics and copy; the Python scripts validate and render inputs. They do not autonomously discover meaningful clips or establish a person's identity.
+
+**Current renderer:** one continuous source span, a 1080×1920 canvas, and 1–3 chapters. Multi-span edits need a clean intermediate video and explicit time mapping. These are implementation limits, not universal editorial rules. Internal skill instructions, detailed references, and copy-tool labels currently remain mainly in Chinese; the two landing pages are bilingual.
+
+## What you bring
+
+Bring the original media, permission to use it, an installed font, and either reviewed subtitles or a separately configured transcription workflow. A short project brief is enough: confirmed people/organization names, interview background, audience, publishing purpose, key terms, and public/private boundaries. Existing notes can supply these facts; a large knowledge base is not required.
+
+The reusable layer is the editing workflow and local tooling. Your organization's facts, speaker identities, brand choices, source recordings, and permissions remain project inputs. More context improves naming and framing; it never overrides the recording. See [Project context](references/project_context.md).
+
+## How it works
 
 ```mermaid
 flowchart TD
-    A["源采访视频 / 音频"] --> B{已有可靠字幕?}
-    B -->|有| E["校订文本与片内 SRT"]
-    B -->|无| C["可选 ASR 语音识别<br/>本地 Qwen3-ASR"]
-    C --> D["可选 Forced Aligner 时间对齐<br/>可选说话人分离"]
-    D --> E
-    A --> F["人工身份确认与主题选段"]
-    E --> F
-    F --> T["整批主题归类与系列顺序"]
-    T --> G["编辑计划 preview 校验<br/>构图 / 语义章节 / 源时间窗"]
-    G --> H["copy_sheet 导出文案表<br/>用户确认后 apply"]
-    H --> I["render_interview<br/>Python + Pillow + FFmpeg + 字体"]
-    J["style.json 几何模板<br/>素材或品牌配色"] --> I
-    E --> I
-    I --> K["MP4 / SRT / ASS / 抽帧 / qc.json"]
-    K --> R["按主题生成目录 / 观看页 / 统一清单"]
-    R --> L["机器检查 + 逐条人工听看"]
-    L --> M["formal 校验通过后交付<br/>delivered 与唯一清单一致"]
+    A["Source media + project context"] --> B{"Reviewed SRT available?"}
+    B -->|No| C["Separate ASR / alignment workflow"]
+    C --> D["Review transcript and timing"]
+    B -->|Yes| D
+    D --> E["Assistant proposes complete excerpts and theme groups"]
+    E --> F["Editorial plan: identity, composition, chapters, source windows"]
+    F --> G["Copy document + linked SRT: user reviews"]
+    G --> H{"Explicit approval?"}
+    H -->|"Edit and confirm, or accept draft"| I["Compile copy + render a preview"]
+    H -->|"Pending"| G
+    J["Pillow + FFmpeg + font + style"] --> I
+    I --> K["Machine QC + human listening and viewing"]
+    K --> L["Theme folders + review page + manifest"]
+    L --> M["Promote state only with actual review evidence"]
 ```
 
-ASR（自动语音识别）把声音变成文字；强制对齐把文字放回时间轴；说话人分离产生声音簇，不能确认真人身份。LLM（大语言模型）助手负责协助主题与文案判断；FFmpeg 负责合成，不替代内容审阅。
+`画面文字编订.md` (on-screen copy review) controls titles, chapter labels, other fixed text, and subtitle sizing. Its linked SRT controls spoken subtitle text and timing. The user edits and confirms before production, unless they explicitly accept the first draft and authorize production. Silence is not approval. Changes to either file require re-application and re-rendering; already exported MP4s do not update themselves.
 
-## 安装
+ASR means automatic speech recognition. It is an optional upstream step, not part of the renderer. The documented local route uses Qwen3-ASR-1.7B; model weights and inference environments are not bundled. Reviewed SRT from other permitted tools can also be used. Alignment places text on the timeline; diarization produces acoustic labels, not confirmed names. See [Environment and ASR](references/environment.md).
 
-先安装 Git、Python 3.10+ 和带 libass / libx264 的 FFmpeg（含 ffprobe）。本机验证 Python 3.14；CI（自动检查）配置了 Python 3.10 与 3.12 的 Ubuntu 环境，远端运行结果需在发布时另行核对。ASR 使用独立环境，不能照搬渲染器的 Python 版本。
+## Try it without an ASR model
+
+Install Git, Python 3.10+, FFmpeg with `ffprobe`, `libass` and `libx264`, and a CJK-capable font. On macOS use `brew install ffmpeg`; on Ubuntu use `sudo apt-get install ffmpeg fonts-noto-cjk`.
 
 ```bash
 git clone https://github.com/lichtweiss/interview-to-short-video-skill.git
 cd interview-to-short-video-skill
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python scripts/doctor.py --font /your/fonts/NotoSansCJK-Regular.ttc
-```
-
-macOS 可用 `brew install ffmpeg`；Ubuntu 可用 `sudo apt-get install ffmpeg fonts-noto-cjk`。实际是否有 ass / libx264 以 doctor 输出为准。Windows 尚未验证；命令使用 POSIX shell，Windows 需自行适配路径、虚拟环境与字体。
-
-让 Codex 发现技能，可将仓库克隆到 `~/.codex/skills/interview-to-short-video-skill`，或把该位置链接到持久保存的仓库目录，然后重开会话。不要把仓库再嵌套一层。其他助手按各自技能目录安装，尚未逐个验证。
-
-调用名称：`$interview-to-short-video-skill`。旧本机技能名 `interview-short-video` 不是本仓库安装名；迁移时避免同时启用两个版本。
-
-## 第一次试跑（不需要模型或真实采访）
-
-下例生成彩条与提示音，仅验证工具链，不证明语音识别或剪辑质量；字体需自行安装。输出工作目录必须为新目录。
-
-```bash
-.venv/bin/python scripts/create_demo.py --work work/demo --font /your/fonts/NotoSansCJK-Regular.ttc --font-family 'Noto Sans CJK SC'
+.venv/bin/python scripts/doctor.py --font /path/to/NotoSansCJK-Regular.ttc
+.venv/bin/python scripts/create_demo.py \
+  --work work/demo \
+  --font /path/to/NotoSansCJK-Regular.ttc \
+  --font-family 'Noto Sans CJK SC'
 .venv/bin/python scripts/validate_editorial_plan.py work/demo/plan.json --stage preview --json
 .venv/bin/python scripts/render_interview.py work/demo/spec.json --out work/demo/preview
-.venv/bin/python -m unittest discover -s tests -v
 ```
 
-查看 `preview/video.mp4`、三张抽帧与 `qc.json`。合成样例明确保留 human review 为 pending，不得作为正式采访交付。可选配色试跑：
+Replace the font path and family with an installed matching font. Each output directory must be new. Open `work/demo/preview/video.mp4`, its three sampled frames, and `qc.json`. The generated bars and tone test the toolchain; they do not test ASR or real interview editing.
+
+To export the grouped review page, add `"render_dir": "preview"` to the clip in `work/demo/plan.json`, then run:
 
 ```bash
-.venv/bin/python scripts/suggest_palette.py work/demo/source.mp4 --end 2 --out work/demo/palette
+.venv/bin/python scripts/export_review.py work/demo/plan.json --out work/review
 ```
 
-## 真实项目
+Open `work/review/index.html`. It remains a preview with human review pending. [Theme export contract](references/themes.md) explains the plan/render mapping.
 
-按 [SKILL.md](SKILL.md) 执行。先登记源片、主题和人物证据，再准备片内时间 SRT 与渲染规格。示例规格由 create_demo 生成，完整字段见 [生产合同](references/production.md)，文案工具见 [文案确认](references/copy.md)，状态与证据见 [编辑计划](references/editorial_plan.md)。
+## Use it in an editing project
+
+For Codex discovery, clone into `~/.codex/skills/interview-to-short-video-skill`, or link that path to a persistent checkout, then start a new session. Invoke `$interview-to-short-video-skill`. Read [SKILL.md](SKILL.md) for editing constraints; other assistant hosts have not been separately verified.
+
+Before rendering real footage, prepare the editorial plan and per-clip specs, then hand over the copy document:
 
 ```bash
-.venv/bin/python scripts/copy_sheet.py export /project/spec.json /project/copy.md
-# 用户校订并明确确认后，才将 copy.md 中 copy-status 改为 user-confirmed。
-.venv/bin/python scripts/copy_sheet.py apply /project/spec.json /project/copy.md --out /project/build/spec.json --approval "用户确认的实际消息引用"
+.venv/bin/python scripts/copy_sheet.py export /project/spec.json /project/画面文字编订.md
+# Only after the user edits and confirms the document:
+.venv/bin/python scripts/copy_sheet.py apply \
+  /project/spec.json /project/画面文字编订.md \
+  --out /project/build/spec.json --approval "Actual user confirmation or message reference"
 .venv/bin/python scripts/render_interview.py /project/build/spec.json --out /project/preview
 ```
 
-`画面文字编订.md` 是生产中途的文字与字幕审阅入口：表格修改固定文案和字幕字号，文档链接的 SRT 修改逐字字幕内容与时间。必须主动交付文件路径并等待用户编辑确认；只有用户明确接受初稿且授权生产，才用 `--accept-default --approval "实际授权引用"`。修改后重新编译和渲染，原 MP4 不会自动更新。
+Use `--accept-default` only with actual user authorization to produce the first draft. Approval fields record a trusted user's decision; they are not authentication. The renderer is a low-level tool and does not enforce the entire editorial workflow by itself.
 
-每批由编辑助手自动提出主题，再用 [主题输出工具](references/themes.md) 生成主题目录、预览页与统一清单；不固定主题数，不把单条章节当成整批主题。项目最小背景与缺失信息处理见 [项目上下文](references/project_context.md)。这部分通用公开表述仍待作者批准。
+## Evidence and limitations
 
-preview 校验通过只表示计划结构成立；formal 校验要等样片 QC 与实际人工审阅完成后再运行。渲染器不替你检查整个计划或确认记录；不要绕过工作流用低层工具输出冒充正式片。
+| Area | Current evidence |
+|---|---|
+| Renderer and file contracts | 13 automated tests cover synthetic rendering, full decode, malformed inputs, copy/SRT fingerprints, and theme export |
+| Platforms | macOS arm64 / Python 3.14 locally; Ubuntu / Python 3.10 and 3.12 in GitHub Actions |
+| Editorial decisions | Need human source review; no public real-interview behavioral benchmark yet |
+| ASR and Windows | Not tested as part of this repository's release validation |
+| Static assessment | Plugin Eval improved from 68/D to 77/C after refactoring; static budget and complexity warnings remain. This is not a measured editing success rate |
 
-## 环境、边界和发布标准
+[Validation record](docs/validation.md) · [Current design diagnosis and priorities](docs/design-review.md)
 
-必需 / 可选依赖、Qwen 型号、替代转写软件的输入合同、CPU/GPU 边界与故障处理见 [环境说明](references/environment.md)。本仓库不打包模型、字体、真实录音、客户转写或个人路径，不自动联网、下载模型、发布成片或创建自动化。AI 助手自身若使用云服务，文本仍可能发送到其服务端。
+## Documentation and maintenance
 
-[发布清单](docs/releasing.md) 定义以后每次分享前的检查。[CONTRIBUTING.md](CONTRIBUTING.md) 说明如何复现问题。代码与说明采用 [MIT](LICENSE)；第三方依赖、模型、字体、素材分别遵守各自许可，MIT 不授予真实采访素材的使用权。
+| Next task | Read |
+|---|---|
+| Install or connect transcription | [Environment and ASR](references/environment.md) |
+| Prepare editorial evidence | [Editorial plan](references/editorial_plan.md) |
+| Review fixed text and subtitles | [Copy control](references/copy.md) |
+| Configure rendering | [Production contract](references/production.md) |
+| Organize outputs | [Themes](references/themes.md) |
+| Report a reproducible problem | [Contributing](CONTRIBUTING.md) · [Issues](https://github.com/lichtweiss/interview-to-short-video-skill/issues) |
+
+Maintenance priorities are a public real-interview evaluation, stronger links between review records and actual outputs, and continued simplification of the rendering workflow. These are open work, not shipped features or a delivery schedule. Keep English and Chinese landing pages aligned when behavior changes. [Release checklist](docs/releasing.md)
+
+The separation of reusable infrastructure from project-specific context is informed by [Yage's context-infrastructure](https://github.com/grapeot/context-infrastructure). The emphasis on source attribution and separate derived judgments also draws on [Lizheng Open Context](https://github.com/sunyuzheng/lizheng-open-context). These are design references, not dependencies or claims of endorsement.
+
+Code and documentation use the [MIT License](LICENSE). Models, fonts, recordings, and interview participants' contributions retain their own licensing and permission requirements. Local rendering does not imply the AI assistant's text processing is offline.
