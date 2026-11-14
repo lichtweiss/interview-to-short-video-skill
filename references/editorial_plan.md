@@ -70,7 +70,7 @@
 - `identity_map[].person_id` 是规格里唯一使用的人物键；显示名不能从镜头在场自动推断。确认身份要有 `confirmed_by` 和至少一种原声、画面或源时间证据。用户改名时在人物条目记录 `correction` 与 `correction_note`，旧 ASR 名称不能继续作为显示名。
 - `clips[].speakers` 只填人物键。两人及以上必须有 `dialogue_relation`、`interaction_summary` 和选段理由；`person_quota`、`person_first`、`speaker_quota` 不能作为选段依据。
 - `layout` 使用 `solo`、`two_shot` 或 `wide`。`solo` 必须写当前说话人、居中证据和为何不损失互动；双人或全景必须确认互动仍在画面中。存在 `crop` 时必须同时有 `crop_evidence`。
-- `chapters` 为 1–3 段，首段 `start` 为 0，随后严格递增；每段有真实语义标签和 `semantic_basis`。多条片全为单段时，批次必须有 `batch_audit.chapter_reviewed=true`、`uniform_single_chapter_decision=accepted_after_review` 和逐条理由。
+- `chapters` 默认必须为 2–3 段，首段 `start` 为 0，随后严格递增；每段有真实语义标签和 `semantic_basis`，并对应原声中的实际语义转折。若内容确实无法形成两个独立转折，只能停留在候选阶段并写明原因，不能作为正式交付。
 - `copy_status`、`machine_qc` 和 `human_review` 分开记录。`formal` 或 `delivered` 还要求 `copy_confirmation.status=user-confirmed`、非空 `revision_id`、所有机器 QC 为 `passed`、四项人工审阅均为 `approved`，并有一个 `state.canonical_manifest`。
 - `source_registry` 在正式阶段必须包含源文件引用和指纹；`state.status` 必须与当前阶段一致，`state.conflicting_manifests` 必须为空。交付说明、审阅索引和正式清单若出现数量或状态冲突，应先合并为一个 canonical manifest，再继续渲染。
 
@@ -89,4 +89,4 @@ python3 /path/to/interview-to-short-video-skill/scripts/validate_editorial_plan.
 
 多人片至少记录两种构图方案；solo 说明当前说话人及为何不破坏问答关系，two_shot/wide 确认互动仍在画面内。开头让观众看清当前说话者，用声音、口型和镜头相互印证，不继承其他项目人名或左右位置。
 
-章节表是动态顶部角标和进度条的语义来源，每个转折前后抽帧核对实际切换。整批全是单章节时逐条复核并说明原因，不把模板最大段数当作每条段数。
+章节表是动态顶部角标和进度条的语义来源，每个转折前后抽帧核对实际切换。每条短视频至少拆成两个章节；不把模板最大段数当作每条段数。

@@ -316,8 +316,8 @@ def _composition(clip, path, errors, speakers):
 
 def _chapters(clip, path, errors, windows):
     chapters = clip.get("chapters")
-    if not isinstance(chapters, list) or not 1 <= len(chapters) <= 3:
-        add(errors, f"{path}.chapters", "provide 1-3 semantic chapters")
+    if not isinstance(chapters, list) or not 2 <= len(chapters) <= 3:
+        add(errors, f"{path}.chapters", "provide 2-3 semantic chapters")
         chapters = []
     if chapters:
         if not isinstance(chapters[0], dict) or chapters[0].get("start") != 0:

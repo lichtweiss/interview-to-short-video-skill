@@ -355,8 +355,8 @@ def prepare_timeline(spec, style, source, audio_source):
 
 def validate_chapters_and_copy(spec, duration):
     chapters = spec["chapters"]
-    if not 1 <= len(chapters) <= 3 or chapters[0]["start"] != 0:
-        raise ValueError("Provide 1-3 chapters, beginning at zero")
+    if not 2 <= len(chapters) <= 3 or chapters[0]["start"] != 0:
+        raise ValueError("Provide 2-3 chapters, beginning at zero")
     if any(not str(c["label"]).strip() or not 0 <= c["start"] < duration for c in chapters):
         raise ValueError("Invalid chapter label or time")
     if any(a["start"] >= b["start"] for a, b in zip(chapters, chapters[1:])):
