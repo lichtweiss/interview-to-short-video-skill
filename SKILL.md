@@ -16,6 +16,7 @@ description: "Turn real interviews into topic-grouped short videos with identity
 - 人物、字幕、标题与角标符合当前素材和用户确认；编订文档与对应 SRT 是文字控制入口。
 - 品牌化表达必须从真实问题、真实创造、真实反馈和具体关系中提炼；副标题按片独立拟写，优先保留现场动作、卡顿、情绪与判断，不能用抽象 AI 口号替代人物经验。
 - 最终 MP4 的可见文字、构图、章节变化及尾音经过核对，机器检查与人工判断分别记录。
+- 每批交付必须包含一个可直接打开的 HTML 看板，集中列出视频、字幕、主题、系列顺序、源时间窗、机器质检和人工审阅状态；看板是批次的统一审阅入口，不是可选附属文件。
 
 ## 输入与资源
 
@@ -51,4 +52,4 @@ description: "Turn real interviews into topic-grouped short videos with identity
 
 状态为 `candidate → preview → formal → delivered`。`machine_qc`、`human_review`、`copy_confirmation`、`delivery_status` 分开记录；尚未做过的听审保持 `pending`。formal 只在机器检查及身份、声音、语义、视觉人工审阅完成后晋级；任何 pending 都不能宣称正式交付。结构校验通过仍需核对实际文件与审阅版本，不能以存在文件或渲染日志代替验收。
 
-交付提供主题目录、观看页和统一 manifest，能回查源时间窗、规格、文案/SRT 版本及机器与人工记录；候选数、正式数、已交付数分别报告。preview 可以带 pending 交付审阅；delivered 需要实际交付入口与统一清单一致。字段、命令和失败条件按上述合同核查，不因静态评分或测试通过而自动晋级。
+交付提供主题目录、`index.html` HTML 看板、视频/SRT/spec 文件和统一 manifest，能回查源时间窗、规格、文案/SRT 版本及机器与人工记录；候选数、正式数、已交付数分别报告。`index.html` 必须能在无外部服务的情况下打开，并链接到输出目录内的实际文件。preview 可以带 pending 交付审阅；delivered 需要实际交付入口与统一清单一致。字段、命令和失败条件按上述合同核查，不因静态评分或测试通过而自动晋级。

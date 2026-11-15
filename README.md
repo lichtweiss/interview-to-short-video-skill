@@ -19,7 +19,7 @@ Selecting a striking sentence is only part of the job. A usable clip also needs 
 | Need | Result |
 |---|---|
 | Find coherent excerpts | A source-linked editorial plan with complete thought units and speaker evidence |
-| Organize a batch | Proposed semantic themes, series order, topic folders, an HTML review page, and one manifest |
+| Organize a batch | Proposed semantic themes, series order, topic folders, an HTML dashboard, and one manifest |
 | Control words before production | A visible copy review document plus linked SRT files, followed by explicit user confirmation |
 | Produce a consistent preview | A 1080×1920 MP4, SRT/ASS subtitles, overlay, sampled frames, render log, and machine QC |
 | Decide what can be delivered | Separate machine checks, human listening/viewing, copy approval, and delivery states |
@@ -84,7 +84,7 @@ To export the grouped review page, add `"render_dir": "preview"` to the clip in 
 .venv/bin/python scripts/export_review.py work/demo/plan.json --out work/review
 ```
 
-Open `work/review/index.html`. It remains a preview with human review pending. [Theme export contract](references/themes.md) explains the plan/render mapping.
+Open `work/review/index.html`. This self-contained HTML dashboard collects the batch videos, subtitles, source windows, chapters, machine QC, and human-review states; it remains a preview with human review pending. Keep this file and `manifest.json` with the delivery package. [Theme export contract](references/themes.md) explains the plan/render mapping.
 
 To check the copy approval, edited-subtitle protection, rendering, and review-page commands together, run:
 

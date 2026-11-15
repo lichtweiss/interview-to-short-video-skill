@@ -108,7 +108,12 @@ def export_preview(work):
     manifest = read(out / "manifest.json")
     assert manifest["stage"] == "preview"
     assert len(manifest["clips"]) == 1
+    assert manifest["dashboard"] == "index.html"
     assert manifest["clips"][0]["human_review"]["audio"] == "pending"
+    dashboard = (out / "index.html").read_text()
+    assert 'data-dashboard="interview-clip-review"' in dashboard
+    assert "Source window" in dashboard
+    assert "Machine QC" in dashboard
     for link in re.findall(r'(?:src|href)="([^"]+)"', (out / "index.html").read_text()):
         assert (out / unquote(link)).is_file(), f"Broken review page link: {link}"
     return out
@@ -141,7 +146,7 @@ def main():
             "edited copy route",
             "MP4 decode and hash",
             "changed SRT rejected",
-            "theme page links",
+            "HTML dashboard links and summary",
         ],
         "preview": str(preview / "video.mp4"),
         "review": str(review / "index.html"),

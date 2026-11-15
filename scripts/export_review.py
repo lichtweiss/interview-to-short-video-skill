@@ -17,6 +17,29 @@ from urllib.parse import quote
 from validate_editorial_plan import read_plan, validate
 
 
+def format_seconds(value):
+    """Format a finite source/output duration for the dashboard."""
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        return "—"
+    if seconds < 0:
+        return "—"
+    whole = round(seconds)
+    return f"{whole // 60}:{whole % 60:02d}"
+
+
+def source_windows_text(windows):
+    parts = []
+    for window in windows or []:
+        if not isinstance(window, dict):
+            continue
+        parts.append(
+            f'{format_seconds(window.get("start"))}–{format_seconds(window.get("end"))}'
+        )
+    return "、".join(parts) or "—"
+
+
 def check_rendered_clip(clip, plan_path, out):
     if not isinstance(clip.get("render_dir"), str) or not clip["render_dir"].strip():
         raise ValueError(f'{clip["id"]}: provide render_dir')
@@ -85,36 +108,99 @@ def export(plan_path, out):
         src, digest = check_rendered_clip(clip, plan_path, out)
         records.append((clip, src, digest))
     out.mkdir(parents=True, exist_ok=False)
-    manifest = {"stage": plan.get("stage", "preview"), "themes": plan["themes"], "clips": []}
+    manifest = {
+        "schema_version": 1,
+        "stage": plan.get("stage", "preview"),
+        "dashboard": "index.html",
+        "themes": plan["themes"],
+        "clips": [],
+    }
     sections = [
-        '<!doctype html><html lang="zh-CN"><meta charset="utf-8">',
+        '<!doctype html><html lang="zh-CN" data-dashboard="interview-clip-review">',
+        '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
+        '<meta name="description" content="Interview short-video review dashboard">',
         (
-            "<title>Interview clip review</title><style>"
-            "body{max-width:1000px;margin:auto;padding:24px;font:16px sans-serif}"
-            "video{width:260px;max-width:100%}"
-            "article{display:inline-block;vertical-align:top;width:300px;padding:12px}"
-            "h2{clear:both}</style>"
+            "<title>Interview clip review dashboard</title><style>"
+            ":root{color-scheme:light dark;--bg:#f4f5f7;--card:#fff;--ink:#17202a;"
+            "--muted:#5c6874;--line:#d9dee5;--accent:#b36b28}"
+            "*{box-sizing:border-box}body{max-width:1180px;margin:auto;padding:28px;"
+            "font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;"
+            "background:var(--bg);color:var(--ink)}h1{margin:0 0 6px;font-size:30px}"
+            "h2{margin:34px 0 8px;border-bottom:2px solid var(--line);padding-bottom:6px}"
+            "h3{margin:0 0 8px;font-size:19px}.lede,.theme-basis{color:var(--muted)}"
+            ".summary{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin:22px 0}"
+            ".metric,.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}"
+            ".metric strong{display:block;font-size:26px}.metric span{color:var(--muted);font-size:13px}"
+            "table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);"
+            "border-radius:12px;overflow:hidden}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);"
+            "vertical-align:top}th{font-size:13px;color:var(--muted);font-weight:600}tr:last-child td{border-bottom:0}"
+            ".cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}"
+            ".card video{width:100%;aspect-ratio:9/16;background:#111;border-radius:8px;margin:8px 0}"
+            ".meta{margin:6px 0;color:var(--muted);font-size:14px}.status{font-weight:600;color:var(--accent)}"
+            ".links a{margin-right:12px}.chapter{display:inline-block;margin:3px 5px 0 0;padding:2px 7px;"
+            "border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}"
+            "@media(max-width:700px){body{padding:16px}.summary{grid-template-columns:repeat(2,1fr)}"
+            "table{font-size:13px;display:block;overflow-x:auto;white-space:nowrap}}"
+            "@media(prefers-color-scheme:dark){:root{--bg:#11151a;--card:#1b222a;--ink:#eef2f5;"
+            "--muted:#a8b3bd;--line:#35414d;--accent:#e0a365}}</style>"
         ),
         (
-            f'<h1>Interview clip review</h1><p>State: {html.escape(manifest["stage"])}. '
-            "Machine QC does not replace human review.</p>"
+            f'<main><h1>Interview clip review dashboard</h1>'
+            f'<p class="lede">State: <span class="status">{html.escape(manifest["stage"])}</span>. '
+            'This page collects the batch videos, subtitles, source windows, chapters and review states. '
+            'Machine QC does not replace human review.</p>'
         ),
     ]
+    machine_passed = 0
+    pending_human = 0
+    for clip, src, digest in records:
+        qc = json.loads((src / "qc.json").read_text(encoding="utf-8"))
+        machine_passed += int(qc.get("machine_checks") == "passed")
+        pending_human += sum(
+            value == "pending" for value in clip.get("human_review", {}).values()
+        )
+    sections.append(
+        '<div class="summary">'
+        f'<div class="metric"><strong>{len(records)}</strong><span>clips in batch</span></div>'
+        f'<div class="metric"><strong>{len(themes)}</strong><span>themes</span></div>'
+        f'<div class="metric"><strong>{machine_passed}/{len(records)}</strong><span>machine QC passed</span></div>'
+        f'<div class="metric"><strong>{pending_human}</strong><span>pending human checks</span></div>'
+        '</div>'
+        '<p class="links"><a href="manifest.json">Open manifest.json</a></p>'
+    )
+    sections.append(
+        '<table><thead><tr><th>Series</th><th>Theme</th><th>Title</th>'
+        '<th>Source window</th><th>Duration</th><th>Machine QC</th><th>Human review</th></tr></thead><tbody>'
+    )
     for group_index, (tid, theme) in enumerate(themes.items(), 1):
         slug = re.sub(r"[^\w-]+", "_", theme["name"], flags=re.UNICODE).strip("_")[:60] or "theme"
         folder = f"{group_index:02}_{slug}"
-        sections.append(f'<section><h2>{html.escape(theme["name"])}</h2>')
+        sections.append(
+            f'<tr><td colspan="7"><strong>{html.escape(theme["name"])}</strong>'
+            f'<div class="theme-basis">{html.escape(theme.get("basis", theme.get("theme_basis", "")))}</div>'
+            '</td></tr>'
+        )
         for clip, src, digest in sorted(
             (r for r in records if r[0]["theme_id"] == tid), key=lambda r: r[0]["series_order"]
         ):
             relative = Path(folder) / f'{clip["series_order"]:02}'
             target = out / relative
             target.mkdir(parents=True)
-            for filename in ("video.mp4", "captions.srt", "qc.json"):
+            for filename in ("video.mp4", "captions.srt", "qc.json", "spec.json"):
                 shutil.copy2(src / filename, target / filename)
             video = (relative / "video.mp4").as_posix()
             subtitles = (relative / "captions.srt").as_posix()
+            spec = json.loads((src / "spec.json").read_text(encoding="utf-8"))
+            qc = json.loads((src / "qc.json").read_text(encoding="utf-8"))
+            human = clip.get("human_review", {})
+            human_text = ", ".join(
+                f'{html.escape(key)}={html.escape(str(value))}' for key, value in human.items()
+            ) or "—"
+            chapters = " ".join(
+                f'<span class="chapter">{html.escape(str(ch.get("label", "")))}</span>'
+                for ch in spec.get("chapters", []) if isinstance(ch, dict)
+            )
             manifest["clips"].append(
                 {
                     "id": clip["id"],
@@ -123,19 +209,54 @@ def export(plan_path, out):
                     "title": clip["title"],
                     "video": video,
                     "srt": subtitles,
+                    "spec": (relative / "spec.json").as_posix(),
+                    "source_windows": clip.get("source_windows", []),
+                    "duration_s": qc.get("output_duration"),
+                    "machine_qc": qc.get("machine_checks"),
                     "sha256": digest,
-                    "human_review": clip["human_review"],
+                    "human_review": human,
                 }
             )
             sections.append(
-                (
-                    f'<article><h3>{html.escape(clip["title"])}</h3>'
-                    f'<video controls preload="metadata" src="{quote(video)}"></video>'
-                    f'<p><a href="{quote(subtitles)}">SRT</a></p></article>'
-                )
+                f'<tr><td>{html.escape(str(clip["series_order"]))}</td>'
+                f'<td>{html.escape(theme["name"])}</td>'
+                f'<td><a href="{quote(video)}">{html.escape(clip["title"])}</a></td>'
+                f'<td>{html.escape(source_windows_text(clip.get("source_windows")))}</td>'
+                f'<td>{html.escape(format_seconds(qc.get("output_duration")))}</td>'
+                f'<td>{html.escape(str(qc.get("machine_checks", "—")))}</td>'
+                f'<td>{human_text}</td></tr>'
             )
-        sections.append("</section>")
-    sections.append("</html>")
+    sections.append('</tbody></table>')
+    for group_index, (tid, theme) in enumerate(themes.items(), 1):
+        slug = re.sub(r"[^\w-]+", "_", theme["name"], flags=re.UNICODE).strip("_")[:60] or "theme"
+        folder = f"{group_index:02}_{slug}"
+        sections.append(f'<section><h2>{html.escape(theme["name"])}</h2>')
+        sections.append(f'<p class="theme-basis">{html.escape(theme.get("basis", theme.get("theme_basis", "")))}</p><div class="cards">')
+        for clip, src, digest in sorted(
+            (r for r in records if r[0]["theme_id"] == tid), key=lambda r: r[0]["series_order"]
+        ):
+            relative = Path(folder) / f'{clip["series_order"]:02}'
+            video = (relative / "video.mp4").as_posix()
+            subtitles = (relative / "captions.srt").as_posix()
+            spec = json.loads((src / "spec.json").read_text(encoding="utf-8"))
+            qc = json.loads((src / "qc.json").read_text(encoding="utf-8"))
+            chapters = " ".join(
+                f'<span class="chapter">{html.escape(str(ch.get("label", "")))}</span>'
+                for ch in spec.get("chapters", []) if isinstance(ch, dict)
+            )
+            sections.append(
+                f'<article class="card"><h3>{html.escape(clip["title"])}</h3>'
+                f'<p class="meta">Series {html.escape(str(clip["series_order"]))} · '
+                f'Source {html.escape(source_windows_text(clip.get("source_windows")))} · '
+                f'{html.escape(format_seconds(qc.get("output_duration")))}</p>'
+                f'<video controls preload="metadata" src="{quote(video)}"></video>'
+                f'<p>{chapters}</p><p class="links">'
+                f'<a href="{quote(video)}">MP4</a>'
+                f'<a href="{quote(subtitles)}">SRT</a>'
+                f'<a href="{quote((relative / "spec.json").as_posix())}">Spec</a></p></article>'
+            )
+        sections.append('</div></section>')
+    sections.append('</main></html>')
     (out / "index.html").write_text("\n".join(sections), encoding="utf-8")
     (out / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"

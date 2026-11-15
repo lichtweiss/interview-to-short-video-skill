@@ -303,8 +303,13 @@ class Workflow(unittest.TestCase):
         self.assertEqual(result["stage"], "preview")
         text = (out / "index.html").read_text()
         self.assertNotIn("<script>", text)
+        self.assertIn('data-dashboard="interview-clip-review"', text)
+        self.assertIn("Source window", text)
+        self.assertIn("Machine QC", text)
+        self.assertIn("manifest.json", text)
         for record in result["clips"]:
             self.assertTrue((out / record["video"]).is_file())
+            self.assertTrue((out / record["spec"]).is_file())
             self.assertEqual(record["human_review"]["audio"], "pending")
         for href in re.findall(r'(?:src|href)="([^"]+)"', text):
             self.assertTrue((out / unquote(href)).is_file())

@@ -12,7 +12,7 @@
 python3 /path/to/skill/scripts/export_review.py /project/plan.json --out /project/review_by_theme
 ```
 
-工具校验计划、机器解码状态与 MP4 指纹，然后生成编号主题目录、系列内序号子目录、index.html 观看页与 manifest.json 清单。每条 MP4 和字幕只复制到其主主题；中文名称可用，HTML 会转义标题。输出目录必须不存在。预览保留 preview 状态与 pending 人工项，不自动宣称 formal 或 delivered。
+工具校验计划、机器解码状态与 MP4 指纹，然后生成编号主题目录、系列内序号子目录、`index.html` HTML 看板与 `manifest.json` 清单。看板集中显示批次状态、主题、系列顺序、标题、源时间窗、视频时长、章节、机器 QC 与人工审阅状态，并链接到实际 MP4、SRT 和 spec 文件。`index.html` 是每批交付的必需审阅入口，不能删除或只交 MP4。每条 MP4 和字幕只复制到其主主题；中文名称可用，HTML 会转义标题。输出目录必须不存在。预览保留 preview 状态与 pending 人工项，不自动宣称 formal 或 delivered。
 
 正式交付前需把实际机器与人工结果更新回同一份计划，再做 formal 校验。主题输出是文件组织功能，不能证明归类语义正确、片段内容完整或已获得发布许可。
 
