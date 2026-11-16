@@ -6,7 +6,7 @@
 
 渲染规格同样带 theme_id / series_order，copy_sheet 导出时显示。修改主题归属要先更新编辑计划和规格，再重新导出编订文档，使主题、系列标签和观看顺序同时对齐。
 
-每条渲染完成后，在编辑计划 clips 条目增加 `render_dir`（相对编辑计划目录），指向含 video.mp4、captions.srt、qc.json 的渲染目录。随后：
+每条渲染完成后，在编辑计划 clips 条目增加 `render_dir`（相对编辑计划目录），指向含 video.mp4、captions.srt、qc.json 的渲染目录。HTML 看板的每张封面卡片要把片中真实画面与该片编号、标题、副标题放在同一视觉单元中，并呈现时长/状态；章节可展开查看并可跳转，字幕需有入口。若导出静态总览图，逐条保留这些信息及用户要求的章节/审阅状态，不得只输出人脸或画面缩略图。随后：
 
 ```bash
 python3 /path/to/skill/scripts/export_review.py /project/plan.json --out /project/review_by_theme
